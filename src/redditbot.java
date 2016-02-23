@@ -1,5 +1,3 @@
-package redditbot;
-
 public class redditbot {
 
 	public static void main(String[] args) {
