@@ -9,6 +9,7 @@
 *.sh
 *.json
 *.mp3
+*.dat
 /.idea
 /.project
 /bin
