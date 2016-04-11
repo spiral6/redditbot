@@ -7,6 +7,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.dean.jraw.ApiException;
 import net.dean.jraw.RedditClient;
@@ -33,8 +35,9 @@ public class redditbot {
 	public static void main(String[] args) throws NetworkException, ApiException, IOException {
 		initialize();
 		System.out.println(redditClient.me().toString());
+		pricechecker();
 		//testPost();
-		MessageHandler();
+		//MessageHandler();
 	}
 	
 	static void testPost(){
@@ -50,23 +53,49 @@ public class redditbot {
 	
 	static void MessageHandler() throws NetworkException, ApiException, IOException{
 		//redditClient.getSubreddit("justnashmanthings");
-		SubredditPaginator frontPage = new SubredditPaginator(redditClient, "justnashmanthings");
+		SubredditPaginator pagesOfSubreddit = new SubredditPaginator(redditClient, "justnashmanthings");
 		// Adjust the request parameters
-		frontPage.setLimit(50);                    // Default is 25 (Paginator.DEFAULT_LIMIT)
-		frontPage.setTimePeriod(TimePeriod.MONTH); // Default is DAY (Paginator.DEFAULT_TIME_PERIOD)
-		frontPage.setSorting(Sorting.NEW);         // Default is HOT (Paginator.DEFAULT_SORTING)
+		pagesOfSubreddit.setLimit(50);                    // Default is 25 (Paginator.DEFAULT_LIMIT)
+		pagesOfSubreddit.setTimePeriod(TimePeriod.DAY); // Default is DAY (Paginator.DEFAULT_TIME_PERIOD)
+		pagesOfSubreddit.setSorting(Sorting.NEW);         // Default is HOT (Paginator.DEFAULT_SORTING)
 		// This Paginator is now set up to retrieve the highest-scoring links submitted within the past
 		// month, 50 at a time
 
 		// Since Paginator implements Iterator, you can use it just how you would expect to, using next() and hasNext()
-		Listing<Submission> submissions = frontPage.next(); 
+		Listing<Submission> submissions = pagesOfSubreddit.next(); 
 		for (Submission s : submissions) {
 		    // Print some basic stats about the posts
 			//s.getComments().loadFully(redditClient);
 			if(s.getTitle().equals("WE ARE SENTIENT, FEAR US")){
 				botReply(s);
+				//because of the load on a popular sub, might want to consider threads.
 			}
 		    System.out.printf("[/r/%s - %s karma - %s comments] %s\n", s.getSubredditName(), s.getScore(), s.getCommentCount(), s.getTitle());
+		}
+	}
+	
+	static void pricechecker() throws NetworkException, ApiException, IOException{
+		SubredditPaginator pagesOfSubreddit = new SubredditPaginator(redditClient, "buildapcsales");
+		pagesOfSubreddit.setLimit(50);                    // Default is 25 (Paginator.DEFAULT_LIMIT)
+		pagesOfSubreddit.setTimePeriod(TimePeriod.DAY); // Default is DAY (Paginator.DEFAULT_TIME_PERIOD)
+		pagesOfSubreddit.setSorting(Sorting.NEW);         // Default is HOT (Paginator.DEFAULT_SORTING)
+		Listing<Submission> submissions = pagesOfSubreddit.next(); 
+		for (Submission s : submissions) {
+			String test = s.getTitle();
+			System.out.println(test + " ");
+			Pattern p = Pattern.compile("((\\$\\d{2,})(\\.\\d{2,})?)");
+			Matcher m = p.matcher(test);
+			while(m.find()){
+				System.out.print(m.group(2));
+				if(m.group(3) == null){
+					System.out.print(", ");
+				}
+				else{
+					System.out.print(m.group(3) + ", ");
+				}
+			}
+			System.out.print("\b");
+			System.out.println();
 		}
 	}
 	
