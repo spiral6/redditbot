@@ -35,7 +35,7 @@ public class redditbot {
 	public static void main(String[] args) throws NetworkException, ApiException, IOException {
 		initialize();
 		System.out.println(redditClient.me().toString());
-		pricechecker();
+		bapcsales();
 		//testPost();
 		//MessageHandler();
 	}
@@ -74,29 +74,99 @@ public class redditbot {
 		}
 	}
 	
-	static void pricechecker() throws NetworkException, ApiException, IOException{
+	static void bapcsales() throws NetworkException, ApiException, IOException{
 		SubredditPaginator pagesOfSubreddit = new SubredditPaginator(redditClient, "buildapcsales");
-		pagesOfSubreddit.setLimit(50);                    // Default is 25 (Paginator.DEFAULT_LIMIT)
+		pagesOfSubreddit.setLimit(12);                    // Default is 25 (Paginator.DEFAULT_LIMIT)
 		pagesOfSubreddit.setTimePeriod(TimePeriod.DAY); // Default is DAY (Paginator.DEFAULT_TIME_PERIOD)
 		pagesOfSubreddit.setSorting(Sorting.NEW);         // Default is HOT (Paginator.DEFAULT_SORTING)
 		Listing<Submission> submissions = pagesOfSubreddit.next(); 
 		for (Submission s : submissions) {
-			String test = s.getTitle();
-			System.out.println(test + " ");
-			Pattern p = Pattern.compile("((\\$\\d{2,})(\\.\\d{2,})?)");
-			Matcher m = p.matcher(test);
-			while(m.find()){
-				System.out.print(m.group(2));
-				if(m.group(3) == null){
-					System.out.print(", ");
-				}
-				else{
-					System.out.print(m.group(3) + ", ");
-				}
-			}
-			System.out.print("\b");
+			System.out.println(s.getTitle());
+			String price = priceDetermination(s.getTitle());
+			String product = productDetermination(s.getTitle());
 			System.out.println();
+			//databasechecker(String price, String product);
 		}
+	}
+	
+	static void viablePart(){
+		//TODO determine if price is good using json database (or something else)
+		//if it is, send notification
+		//TODO make a post request to https://maker.ifttt.com/trigger/buildapcsales/with/key/b-LGh8gsWoadO0qI26hFEp
+		//containing parameters redditURL, price and product
+	}
+	
+	static String priceDetermination(String s){
+		String test = s;
+		
+		Pattern originalprice = Pattern.compile("- ((\\$\\d{2,})(\\.\\d{2,})?)");
+		Matcher m = originalprice.matcher(test);
+		boolean foundogprice = false;
+		if(m.find()){
+			System.out.println("Price: " + m.group(1));
+			foundogprice = true;
+			return m.group(1);
+		}
+		else{
+			System.out.println("Unable to determine actual price, will use the first price.");
+		}
+		
+		Pattern prices = Pattern.compile("((\\$\\d{2,})(\\.\\d{2,})?)");
+		m = prices.matcher(test);
+		String price = "";
+		while(m.find()){
+			//System.out.print(m.group(2));
+			price+=m.group(2);
+			if(m.group(3) == null){
+				System.out.print(", ");
+				price+=", ";
+			}
+			else{
+				//System.out.print(m.group(3) + ", ");
+				price+=m.group(3) + ", ";
+			}
+		}
+		//System.out.print("\b");
+		//System.out.println();
+		price = price.substring(0, price.indexOf(","));
+		price.trim();
+		System.out.println("Price: " + price);
+		return price;
+		
+	}
+	
+	static String productDetermination(String s){
+		String test = s;
+		
+		Pattern flair = Pattern.compile("(\\[GPU\\]|\\[gpu\\])");
+		Matcher m = flair.matcher(test);
+		if(m.find()){
+			String manufacturer = "";
+			String product = "";
+			Pattern manufacturerpattern = Pattern.compile("(EVGA|MSI|ASUS|Gigabyte|Powercolor|Zotac|Sapphire|XFX|PNY)", Pattern.CASE_INSENSITIVE);
+			m = manufacturerpattern.matcher(test);
+			if(m.find()){
+				manufacturer = m.group(0);
+			}
+			
+			Pattern productpattern = Pattern.compile("(((GTX)?(R9?7?)?)? (9\\d\\d|3\\d\\d|2\\d\\d|7\\d\\d)X? ?(Ti)?)", Pattern.CASE_INSENSITIVE);
+			m = productpattern.matcher(test);
+			if(m.find()){
+				product = m.group(0);
+			}
+			manufacturer.trim();
+			product.trim();
+			
+			System.out.println(manufacturer + " - " + product);
+			System.out.println("It's a GPU.");
+		}
+		else{
+			System.out.println("Not a GPU.");
+		}
+		
+		//return product;
+		return null;
+		
 	}
 	
 	static void botReply(Submission s) throws NetworkException, ApiException, IOException{
